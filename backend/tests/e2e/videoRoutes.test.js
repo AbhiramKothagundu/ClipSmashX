@@ -9,6 +9,7 @@ const request = require("supertest");
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
+const authMiddleware = require("../../src/middleware/auth");
 
 // Create a test server
 const app = express();
