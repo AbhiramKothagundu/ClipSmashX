@@ -22,69 +22,83 @@ if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Middleware
-app.use(bodyParser.json());
-app.use(cors());
-app.use("/uploads", express.static("uploads")); // Serve uploaded files
+/**
+ * Sets up our Express app
+ * - Adds middleware
+ * - Sets up routes
+ * - Handles auth
+ */
+function setupApp(app) {
+    // Basic stuff we need
+    app.use(bodyParser.json());
+    app.use(cors());
+    app.use("/uploads", express.static("uploads"));
+    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
-// Swagger UI
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
+    // Set up our routes
+    app.use(
+        "/api/videos",
+        (req, res, next) => {
+            // Share routes skip auth
+            if (req.path.startsWith("/share/")) {
+                return next();
+            }
+            authMiddleware(req, res, next);
+        },
+        videoRoutes
+    );
 
-// Database setup
-const db = new sqlite3.Database("./database.db", (err) => {
-    if (err) {
-        console.error("Database connection error:", err);
-        process.exit(1);
-    }
-    console.log("Connected to the SQLite database.");
-
-    // Enable foreign keys
-    db.run("PRAGMA foreign_keys = ON");
-
-    // Initialize tables with error handling
-    Video.createTable()
-        .then(() => {
-            console.log("Database tables initialized successfully");
-        })
-        .catch((err) => {
-            console.error("Failed to initialize database tables:", err);
-            process.exit(1);
-        });
-});
-
-// Make db available globally
-global.db = db;
-
-// Routes
-app.use(
-    "/api/videos",
-    (req, res, next) => {
-        // Skip auth for share routes
-        if (req.path.startsWith("/share/")) {
-            return next();
-        }
-        authMiddleware(req, res, next);
-    },
-    videoRoutes
-);
-
-// Basic health check route
-app.get("/health", (req, res) => {
-    res.json({ status: "ok", message: "Server is running" });
-});
-
-// Start server
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
-
-// Handle process termination
-process.on("SIGINT", () => {
-    db.close((err) => {
-        if (err) {
-            console.error(err.message);
-        }
-        console.log("Closed the database connection.");
-        process.exit(0);
+    // Health check
+    app.get("/health", (req, res) => {
+        res.json({ status: "ok", message: "Server is running" });
     });
-});
+
+    return app;
+}
+
+setupApp(app);
+
+// Skip database initialization in test environment
+if (process.env.NODE_ENV !== "test") {
+    // Database setup
+    const db = new sqlite3.Database("./database.db", (err) => {
+        if (err) {
+            console.error("Database connection error:", err);
+            process.exit(1);
+        }
+        console.log("Connected to the SQLite database.");
+
+        // Enable foreign keys
+        db.run("PRAGMA foreign_keys = ON");
+
+        // Initialize tables with error handling
+        Video.createTable()
+            .then(() => {
+                console.log("Database tables initialized successfully");
+            })
+            .catch((err) => {
+                console.error("Failed to initialize database tables:", err);
+                process.exit(1);
+            });
+    });
+
+    // Make db available globally
+    global.db = db;
+
+    // Handle process termination
+    process.on("SIGINT", () => {
+        db.close((err) => {
+            if (err) {
+                console.error(err.message);
+            }
+            console.log("Closed the database connection.");
+            process.exit(0);
+        });
+    });
+
+    const server = app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+    });
+}
+
+module.exports = { app, setupApp };

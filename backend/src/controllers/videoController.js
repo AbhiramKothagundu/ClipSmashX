@@ -9,14 +9,31 @@ const Video = require("../models/videoModel");
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
+/**
+ * Handles video upload
+ * - Checks if file exists
+ * - Gets video duration
+ * - Makes sure video isn't too long/short
+ * - Saves to database
+ * - Returns video info
+ */
 const uploadVideo = async (req, res) => {
     try {
+        // No file? No bueno
         if (!req.file) {
             return res.status(400).json({
                 error: true,
                 message: "No video file uploaded",
             });
         }
+
+        // Log what we got
+        console.log("Got a file:", {
+            name: req.file.originalname,
+            type: req.file.mimetype,
+            size: req.file.size,
+            where: req.file.path,
+        });
 
         const filePath = req.file.path;
         console.log("File uploaded:", {
@@ -79,6 +96,7 @@ const uploadVideo = async (req, res) => {
             );
         }
     } catch (error) {
+        // Something broke
         // Clean up file if exists
         if (req.file && req.file.path && fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
@@ -90,8 +108,16 @@ const uploadVideo = async (req, res) => {
     }
 };
 
+/**
+ * Gets all videos we have
+ * - Checks database for videos
+ * - Makes sure files still exist
+ * - Cleans up missing files from DB
+ * - Returns list of valid videos
+ */
 const getVideos = async (req, res) => {
     try {
+        // Get everything from DB
         const sql = `SELECT * FROM videos ORDER BY created_at DESC`;
         global.db.all(sql, [], (err, rows) => {
             if (err) {
@@ -118,6 +144,7 @@ const getVideos = async (req, res) => {
             });
         });
     } catch (error) {
+        // Uh oh
         res.status(500).json({
             error: true,
             message: error.message,
@@ -125,17 +152,24 @@ const getVideos = async (req, res) => {
     }
 };
 
+/**
+ * Trims a video to make it shorter
+ * - Checks if video exists
+ * - Makes sure start/end times make sense
+ * - Creates new trimmed video
+ * - Saves new video to DB
+ */
 const trimVideo = async (req, res) => {
     try {
         const { id } = req.params;
         const { startTime, endTime } = req.body;
 
-        console.log("Trim request:", {
+        // Log what we're trying to do
+        console.log("Trimming video:", {
             id,
             startTime,
             endTime,
-            body: req.body,
-        }); // Add this for debugging
+        });
 
         // Validate input
         if (startTime === undefined || endTime === undefined) {
@@ -239,6 +273,7 @@ const trimVideo = async (req, res) => {
             }
         });
     } catch (error) {
+        // Something went wrong
         res.status(500).json({
             error: true,
             message: error.message,
@@ -246,6 +281,13 @@ const trimVideo = async (req, res) => {
     }
 };
 
+/**
+ * Merges multiple videos into one
+ * - Checks if all videos exist
+ * - Combines them in order
+ * - Creates new merged video
+ * - Saves to DB
+ */
 const mergeVideos = async (req, res) => {
     try {
         const { videoIds } = req.body;
@@ -373,6 +415,13 @@ const mergeVideos = async (req, res) => {
     }
 };
 
+/**
+ * Creates a shareable link for a video
+ * - Generates random token
+ * - Sets expiry time
+ * - Updates video in DB with share info
+ * - Returns links for API and frontend
+ */
 const generateShareLink = async (req, res) => {
     try {
         const { id } = req.params;
@@ -474,11 +523,17 @@ const generateShareLink = async (req, res) => {
     }
 };
 
+/**
+ * Gets a shared video without needing auth
+ * - Checks if share token is valid
+ * - Makes sure link hasn't expired
+ * - Returns video info and URL
+ */
 const getSharedVideo = async (req, res) => {
     try {
         const { token } = req.params;
 
-        // Clear expired tokens first
+        // Clean up old share links first
         await Video.clearExpiredTokens();
 
         const sql = `

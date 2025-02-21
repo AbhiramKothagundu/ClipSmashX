@@ -2,4 +2,6 @@ node_modules/
 uploads/*
 !uploads/.gitkeep
 .env
+database.db
+tests/mocks/test.mp4
 

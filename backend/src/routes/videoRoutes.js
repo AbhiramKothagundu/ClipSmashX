@@ -255,17 +255,23 @@ const authMiddleware = require("../middleware/auth");
  *         description: Video not found or link expired
  */
 
-// Error handling middleware for multer
+/**
+ * Handles file upload errors from multer
+ * - Checks for multer errors
+ * - Returns nice error messages
+ */
 const handleUpload = (req, res, next) => {
     const uploadMiddleware = upload.single("video");
 
     uploadMiddleware(req, res, (err) => {
         if (err instanceof multer.MulterError) {
+            // Multer messed up
             return res.status(400).json({
                 error: true,
                 message: `Upload error: ${err.message}`,
             });
         } else if (err) {
+            // Something else broke
             return res.status(400).json({
                 error: true,
                 message: err.message,
@@ -275,12 +281,13 @@ const handleUpload = (req, res, next) => {
     });
 };
 
-// Share routes should come before other routes and should not require auth
+// Share routes don't need auth
 router.get("/share/:token", videoController.getSharedVideo);
 
-// All other routes require auth
+// Everything else needs auth
 router.use(authMiddleware);
 
+// All our routes
 router.post("/:id/share", videoController.generateShareLink);
 router.post("/upload", handleUpload, videoController.uploadVideo);
 router.get("/", videoController.getVideos);
