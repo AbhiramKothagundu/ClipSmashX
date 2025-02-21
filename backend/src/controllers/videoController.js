@@ -94,9 +94,21 @@ const getVideos = async (req, res) => {
                     message: err.message,
                 });
             }
+
+            // Filter out videos with missing files
+            const validVideos = rows.filter((video) => {
+                const exists = fs.existsSync(video.path);
+                if (!exists) {
+                    // Delete record if file doesn't exist
+                    const deleteSql = `DELETE FROM videos WHERE id = ?`;
+                    global.db.run(deleteSql, [video.id]);
+                }
+                return exists;
+            });
+
             res.json({
                 success: true,
-                videos: rows,
+                videos: validVideos,
             });
         });
     } catch (error) {
