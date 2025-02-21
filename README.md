@@ -2,6 +2,12 @@
 
 A REST API service that handles video processing operations. Built with Node.js and Express, it provides endpoints for video upload, trimming, merging, and sharing capabilities. Includes a comprehensive test suite and Swagger documentation.
 
+## Project Demo
+
+A demonstration video of the project is available:
+
+[📺 Watch the Demo](public/demo_video.mkv)
+
 ## Key Features
 
 -   **Video Upload:** Support for large video files (up to 100MB)
