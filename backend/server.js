@@ -9,6 +9,7 @@ const fs = require("fs");
 const path = require("path");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpecs = require("./src/config/swagger");
+const cors = require("cors");
 
 dotenv.config();
 
@@ -23,6 +24,8 @@ if (!fs.existsSync(uploadsDir)) {
 
 // Middleware
 app.use(bodyParser.json());
+app.use(cors());
+app.use("/uploads", express.static("uploads")); // Serve uploaded files
 
 // Swagger UI
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
