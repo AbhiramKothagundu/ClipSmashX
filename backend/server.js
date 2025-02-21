@@ -5,14 +5,27 @@ const dotenv = require("dotenv");
 const videoRoutes = require("./src/routes/videoRoutes");
 const authMiddleware = require("./src/middleware/auth");
 const Video = require("./src/models/videoModel");
+const fs = require("fs");
+const path = require("path");
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpecs = require("./src/config/swagger");
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 // Middleware
 app.use(bodyParser.json());
+
+// Swagger UI
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 // Database setup
 const db = new sqlite3.Database("./database.db", (err) => {
