@@ -98,6 +98,72 @@ const multer = require("multer");
  *         description: Server error
  */
 
+/**
+ * @swagger
+ * /api/videos/{id}/trim:
+ *   post:
+ *     summary: Trim a video
+ *     security:
+ *       - ApiKeyAuth: []
+ *     tags: [Videos]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Video ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               startTime:
+ *                 type: number
+ *                 description: Start time in seconds
+ *               endTime:
+ *                 type: number
+ *                 description: End time in seconds
+ *     responses:
+ *       201:
+ *         description: Video trimmed successfully
+ *       400:
+ *         description: Invalid request
+ *       404:
+ *         description: Video not found
+ */
+
+/**
+ * @swagger
+ * /api/videos/merge:
+ *   post:
+ *     summary: Merge multiple videos
+ *     security:
+ *       - ApiKeyAuth: []
+ *     tags: [Videos]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               videoIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: Array of video IDs to merge
+ *     responses:
+ *       201:
+ *         description: Videos merged successfully
+ *       400:
+ *         description: Invalid request
+ *       404:
+ *         description: One or more videos not found
+ */
+
 // Error handling middleware for multer
 const handleUpload = (req, res, next) => {
     const uploadMiddleware = upload.single("video");
@@ -123,5 +189,9 @@ router.post("/upload", handleUpload, videoController.uploadVideo);
 
 // GET /api/videos - List all videos
 router.get("/", videoController.getVideos);
+
+// Add these new routes
+router.post("/:id/trim", videoController.trimVideo);
+router.post("/merge", videoController.mergeVideos);
 
 module.exports = router;

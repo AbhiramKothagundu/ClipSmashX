@@ -56,3 +56,45 @@ export const getVideos = async () => {
         throw error;
     }
 };
+
+export const trimVideo = async (
+    videoId: number,
+    startTime: number,
+    endTime: number
+) => {
+    try {
+        const response = await fetch(`${API_URL}/videos/${videoId}/trim`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: API_TOKEN,
+            },
+            body: JSON.stringify({ startTime, endTime }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        return data;
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const mergeVideos = async (videoIds: number[]) => {
+    try {
+        const response = await fetch(`${API_URL}/videos/merge`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: API_TOKEN,
+            },
+            body: JSON.stringify({ videoIds }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        return data;
+    } catch (error) {
+        throw error;
+    }
+};
