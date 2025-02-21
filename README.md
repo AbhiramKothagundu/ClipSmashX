@@ -58,10 +58,13 @@ git clone https://github.com/AbhiramKothagundu/video-rest-api.git
 cd video-processing-api
 ```
 
-2. Install backend dependencies:
+2. Install dependencies:
 
 ```bash
 cd backend
+npm install
+
+cd ../frontend
 npm install
 ```
 
@@ -77,6 +80,12 @@ SHARE_LINK_EXPIRY_HOURS=24      # Default share link validity
 NODE_ENV=development            # Environment (development/production/test)
 ```
 
+Create environment file (frontend/.env):
+
+```ini
+PORT=3001                        # Frontend server port
+```
+
 4. Create required directories:
 
 ```bash
@@ -85,6 +94,8 @@ mkdir -p backend/tests/mocks/uploads
 ```
 
 ### Running the Server
+
+#### Backend:
 
 Development mode (with auto-reload):
 
@@ -101,6 +112,25 @@ npm start
 ```
 
 Server runs at: `http://localhost:3000`
+
+#### Frontend:
+
+Development mode:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Production mode:
+
+```bash
+cd frontend
+npm run build
+npm start
+```
+
+Frontend runs at: `http://localhost:3001`
 
 ### Development Tools
 
