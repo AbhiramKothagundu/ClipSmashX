@@ -33,19 +33,40 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 // Database setup
 const db = new sqlite3.Database("./database.db", (err) => {
     if (err) {
-        console.error(err.message);
+        console.error("Database connection error:", err);
+        process.exit(1);
     }
     console.log("Connected to the SQLite database.");
 
-    // Initialize tables
-    Video.createTable();
+    // Enable foreign keys
+    db.run("PRAGMA foreign_keys = ON");
+
+    // Initialize tables with error handling
+    Video.createTable()
+        .then(() => {
+            console.log("Database tables initialized successfully");
+        })
+        .catch((err) => {
+            console.error("Failed to initialize database tables:", err);
+            process.exit(1);
+        });
 });
 
 // Make db available globally
 global.db = db;
 
 // Routes
-app.use("/api/videos", authMiddleware, videoRoutes);
+app.use(
+    "/api/videos",
+    (req, res, next) => {
+        // Skip auth for share routes
+        if (req.path.startsWith("/share/")) {
+            return next();
+        }
+        authMiddleware(req, res, next);
+    },
+    videoRoutes
+);
 
 // Basic health check route
 app.get("/health", (req, res) => {

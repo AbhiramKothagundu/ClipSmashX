@@ -98,3 +98,19 @@ export const mergeVideos = async (videoIds: number[]) => {
         throw error;
     }
 };
+
+export const generateShareLink = async (videoId: number, hours?: number) => {
+    try {
+        const response = await fetch(`${API_URL}/videos/${videoId}/share`, {
+            method: "POST",
+            headers: getHeaders(),
+            body: JSON.stringify({ hours }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        return data;
+    } catch (error) {
+        throw error;
+    }
+};

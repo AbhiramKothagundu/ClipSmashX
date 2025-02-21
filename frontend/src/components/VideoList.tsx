@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getVideos } from "@/services/api";
 import VideoActions from "./VideoActions";
 import VideoMerge from "./VideoMerge";
+import ShareVideo from "./ShareVideo";
 
 interface Video {
     id: number;
@@ -79,6 +80,7 @@ export default function VideoList() {
                                 video={video}
                                 onSuccess={fetchVideos}
                             />
+                            <ShareVideo videoId={video.id} />
                         </div>
                     ))
                 )}

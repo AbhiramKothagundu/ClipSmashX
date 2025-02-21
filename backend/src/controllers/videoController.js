@@ -4,6 +4,9 @@ const path = require("path");
 const uploadConfig = require("../config/upload");
 const ffmpeg = require("fluent-ffmpeg");
 const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
+const crypto = require("crypto");
+const Video = require("../models/videoModel");
+
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 const uploadVideo = async (req, res) => {
@@ -370,9 +373,158 @@ const mergeVideos = async (req, res) => {
     }
 };
 
+const generateShareLink = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { hours } = req.body;
+        console.log("Generating share link for video:", id);
+
+        const expiryHours = hours || process.env.SHARE_LINK_EXPIRY_HOURS || 24;
+        const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000)
+            .toISOString()
+            .slice(0, 19)
+            .replace("T", " ");
+
+        // First check if video exists
+        const checkSql = `SELECT * FROM videos WHERE id = ?`;
+        global.db.get(checkSql, [id], (checkErr, video) => {
+            if (checkErr) {
+                console.error("Database check error:", checkErr);
+                return res.status(500).json({
+                    error: true,
+                    message: "Database error while checking video",
+                    details: checkErr.message,
+                });
+            }
+
+            if (!video) {
+                console.log("Video not found:", id);
+                return res.status(404).json({
+                    error: true,
+                    message: `Video with ID ${id} not found`,
+                });
+            }
+
+            console.log("Found video:", video);
+
+            const shareToken = crypto.randomBytes(6).toString("hex");
+
+            console.log("Generated token and expiry:", {
+                shareToken,
+                expiresAt,
+                expiryHours,
+            });
+
+            // Then update the video with share token
+            const updateSql = `
+                UPDATE videos 
+                SET share_token = ?, 
+                    expires_at = datetime(?)
+                WHERE id = ?
+            `;
+
+            global.db.run(
+                updateSql,
+                [shareToken, expiresAt, id],
+                function (updateErr) {
+                    if (updateErr) {
+                        console.error("Update error:", updateErr);
+                        return res.status(500).json({
+                            error: true,
+                            message: "Failed to generate share link",
+                            details: updateErr.message,
+                        });
+                    }
+
+                    if (this.changes === 0) {
+                        console.error("No rows updated");
+                        return res.status(404).json({
+                            error: true,
+                            message: "Video not found or update failed",
+                        });
+                    }
+
+                    const apiUrl = `${req.protocol}://${req.get(
+                        "host"
+                    )}/api/videos/share/${shareToken}`;
+                    const frontendUrl = `http://localhost:3001/share/${shareToken}`;
+
+                    console.log("Generated share links:", {
+                        api: apiUrl,
+                        frontend: frontendUrl,
+                    });
+
+                    res.json({
+                        success: true,
+                        shareable_link: apiUrl,
+                        frontend_link: frontendUrl,
+                        expires_at: new Date(expiresAt).toISOString(),
+                        expires_in: `${expiryHours} hours`,
+                    });
+                }
+            );
+        });
+    } catch (error) {
+        console.error("Share link generation error:", error);
+        res.status(500).json({
+            error: true,
+            message: "Share link generation failed",
+            details: error.message,
+        });
+    }
+};
+
+const getSharedVideo = async (req, res) => {
+    try {
+        const { token } = req.params;
+
+        // Clear expired tokens first
+        await Video.clearExpiredTokens();
+
+        const sql = `
+            SELECT * FROM videos 
+            WHERE share_token = ? 
+            AND (expires_at IS NULL OR datetime(expires_at) > datetime('now'))
+        `;
+
+        global.db.get(sql, [token], (err, video) => {
+            if (err || !video) {
+                return res.status(404).json({
+                    error: true,
+                    message: "Video not found or link expired",
+                });
+            }
+
+            // Return video URL for direct access
+            const videoUrl = `${req.protocol}://${req.get("host")}/${
+                video.path
+            }`;
+
+            res.json({
+                success: true,
+                video: {
+                    id: video.id,
+                    title: video.title,
+                    duration: video.duration,
+                    url: videoUrl,
+                    created_at: video.created_at,
+                },
+            });
+        });
+    } catch (error) {
+        console.error("Get shared video error:", error);
+        res.status(500).json({
+            error: true,
+            message: error.message,
+        });
+    }
+};
+
 module.exports = {
     uploadVideo,
     getVideos,
     trimVideo,
     mergeVideos,
+    generateShareLink,
+    getSharedVideo,
 };

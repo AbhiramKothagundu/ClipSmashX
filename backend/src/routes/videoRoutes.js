@@ -3,6 +3,7 @@ const router = express.Router();
 const videoController = require("../controllers/videoController");
 const { upload } = require("../config/upload");
 const multer = require("multer");
+const authMiddleware = require("../middleware/auth");
 
 /**
  * @swagger
@@ -164,6 +165,96 @@ const multer = require("multer");
  *         description: One or more videos not found
  */
 
+/**
+ * @swagger
+ * /api/videos/{id}/share:
+ *   post:
+ *     summary: Generate a shareable link for a video
+ *     security:
+ *       - ApiKeyAuth: []
+ *     tags: [Videos]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Video ID
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hours:
+ *                 type: number
+ *                 description: Number of hours until link expires (default 24)
+ *     responses:
+ *       200:
+ *         description: Share link generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 shareable_link:
+ *                   type: string
+ *                   description: Direct API access URL
+ *                 frontend_link:
+ *                   type: string
+ *                   description: Frontend viewer URL
+ *                 expires_at:
+ *                   type: string
+ *                   format: date-time
+ *                 expires_in:
+ *                   type: string
+ *       404:
+ *         description: Video not found
+ */
+
+/**
+ * @swagger
+ * /api/videos/share/{token}:
+ *   get:
+ *     summary: Get a shared video by token
+ *     tags: [Videos]
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Share token
+ *     responses:
+ *       200:
+ *         description: Video details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 video:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     title:
+ *                       type: string
+ *                     duration:
+ *                       type: integer
+ *                     url:
+ *                       type: string
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *       404:
+ *         description: Video not found or link expired
+ */
+
 // Error handling middleware for multer
 const handleUpload = (req, res, next) => {
     const uploadMiddleware = upload.single("video");
@@ -184,13 +275,15 @@ const handleUpload = (req, res, next) => {
     });
 };
 
-// POST /api/videos/upload - Upload a video file
+// Share routes should come before other routes and should not require auth
+router.get("/share/:token", videoController.getSharedVideo);
+
+// All other routes require auth
+router.use(authMiddleware);
+
+router.post("/:id/share", videoController.generateShareLink);
 router.post("/upload", handleUpload, videoController.uploadVideo);
-
-// GET /api/videos - List all videos
 router.get("/", videoController.getVideos);
-
-// Add these new routes
 router.post("/:id/trim", videoController.trimVideo);
 router.post("/merge", videoController.mergeVideos);
 
