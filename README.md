@@ -1,4 +1,4 @@
-# Video Processing API
+# ClipSmashX - Video Processing API
 
 A REST API service that handles video processing operations. Built with Node.js and Express, it provides endpoints for video upload, trimming, merging, and sharing capabilities. Includes a comprehensive test suite and Swagger documentation.
 
