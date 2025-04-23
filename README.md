@@ -6,7 +6,7 @@ A REST API service that handles video processing operations. Built with Node.js 
 
 A demonstration video of the project is available:
 
-[📺 Watch the Demo](public/demo_video.mkv)
+[📺 Watch the Demo](public/demo_video.mp4)
 
 ## Key Features
 
